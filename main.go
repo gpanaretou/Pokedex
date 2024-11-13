@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gpanaretou/Pokedex/internal/pokeapi"
@@ -96,12 +97,12 @@ func (cc cliCommand) Mapb(c *pokeapi.Config, cache *pokecache.Cache) error {
 		if err != nil {
 			return err
 		}
-		cache.Add(c.Previous, data)
 
 		err = json.Unmarshal(data, &mapLocations)
 		if err != nil {
 			return err
 		}
+		cache.Add(c.Previous, data)
 	}
 
 	c.Next = mapLocations.Next
@@ -115,6 +116,36 @@ func (cc cliCommand) Mapb(c *pokeapi.Config, cache *pokecache.Cache) error {
 	}
 
 	return nil
+}
+
+func (cc cliCommand) Explore(area string, cache *pokecache.Cache) error {
+	baseUrl := "https://pokeapi.co/api/v2/location-area/"
+
+	areaInfo := pokeapi.Area{}
+	requestUrl := baseUrl + area
+	_, ok := cache.Get(requestUrl)
+	if ok {
+		fmt.Println("area explore in cahce!")
+		return nil
+	} else {
+		data, err := pokeapi.ExploreArea(area)
+		if err != nil {
+			return nil
+		}
+
+		err = json.Unmarshal(data, &areaInfo)
+		if err != nil {
+			return err
+		}
+		cache.Add(requestUrl, data)
+	}
+
+	for _, value := range areaInfo.PokemonEncounters {
+		fmt.Printf("  - %s\n", value.Pokemon.Name)
+	}
+
+	return nil
+
 }
 
 func main() {
@@ -135,9 +166,10 @@ func main() {
 			os.Exit(1)
 		}
 
-		input := scanner.Text()
+		args := strings.Split(scanner.Text(), " ")
+		command := args[0]
 
-		switch input {
+		switch command {
 		case "help":
 			fmt.Println("Usage:")
 			commands := cc.Help()
@@ -154,10 +186,20 @@ func main() {
 			if err != nil {
 				fmt.Println(err)
 			}
+		case "explore":
+			if len(args) < 2 {
+				fmt.Println("incorrect usage of 'explore', try 'explore area'")
+				continue
+			}
+			err := cc.Explore(args[1], &cache)
+			if err != nil {
+				fmt.Println(err)
+			}
+
 		case "exit":
 			cc.Exit()
 		default:
-			fmt.Printf("'%s' command does not exist, use 'help' to see a list of commands\n", input)
+			fmt.Printf("'%s' command does not exist, use 'help' to see a list of commands\n", command)
 		}
 	}
 }

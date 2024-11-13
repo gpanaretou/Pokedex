@@ -21,6 +21,35 @@ type MapLocations struct {
 	} `json:"results"`
 }
 
+type Area struct {
+	ID                int    `json:"id"`
+	Name              string `json:"name"`
+	GameIndex         int    `json:"game_index"`
+	PokemonEncounters []struct {
+		Pokemon struct {
+			Name string `json:"name"`
+			URL  string `json:"url"`
+		} `json:"pokemon"`
+		VersionDetails []struct {
+			Version struct {
+				Name string `json:"name"`
+				URL  string `json:"url"`
+			} `json:"version"`
+			MaxChance        int `json:"max_chance"`
+			EncounterDetails []struct {
+				MinLevel        int   `json:"min_level"`
+				MaxLevel        int   `json:"max_level"`
+				ConditionValues []any `json:"condition_values"`
+				Chance          int   `json:"chance"`
+				Method          struct {
+					Name string `json:"name"`
+					URL  string `json:"url"`
+				} `json:"method"`
+			} `json:"encounter_details"`
+		} `json:"version_details"`
+	} `json:"pokemon_encounters"`
+}
+
 func GetMapAreas(c *Config, command string) ([]byte, error) {
 	var requestUrl string
 	if command == "map" {
@@ -32,6 +61,24 @@ func GetMapAreas(c *Config, command string) ([]byte, error) {
 	if command == "mapb" && c.Previous == "" {
 		return []byte{}, fmt.Errorf("cannot get previous map areas")
 	}
+
+	res, err := http.Get(requestUrl)
+	if err != nil {
+		return []byte{}, err
+	}
+	defer res.Body.Close()
+
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	return data, nil
+}
+
+func ExploreArea(area string) ([]byte, error) {
+	baseUrl := "https://pokeapi.co/api/v2/location-area/"
+	requestUrl := baseUrl + area
 
 	res, err := http.Get(requestUrl)
 	if err != nil {
