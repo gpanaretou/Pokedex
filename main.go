@@ -2,10 +2,13 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/gpanaretou/Pokedex/internal/pokeapi"
+	"github.com/gpanaretou/Pokedex/internal/pokecache"
 )
 
 type cliCommand struct {
@@ -43,25 +46,83 @@ func (cc cliCommand) Exit() {
 	os.Exit(0)
 }
 
-func (cc cliCommand) Map(c *pokeapi.Config) error {
-	err := pokeapi.GetMapAreas(c, "map")
-	if err != nil {
-		return err
+func (cc cliCommand) Map(c *pokeapi.Config, cache *pokecache.Cache) error {
+	mapLocations := pokeapi.MapLocations{}
+	entry, ok := cache.Get(c.Next)
+	if ok {
+		fmt.Println("-In cache !!")
+		err := json.Unmarshal(entry, &mapLocations)
+		if err != nil {
+			return err
+		}
+
+	} else {
+		data, err := pokeapi.GetMapAreas(c, "map")
+		if err != nil {
+			return err
+		}
+		cache.Add(c.Next, data)
+
+		err = json.Unmarshal(data, &mapLocations)
+		if err != nil {
+			return err
+		}
 	}
+
+	c.Next = mapLocations.Next
+	if mapLocations.Previous != nil {
+		c.Previous = *mapLocations.Previous
+	}
+
+	for _, location := range mapLocations.Results {
+		fmt.Println(location.Name)
+	}
+
 	return nil
 }
 
-func (cc cliCommand) Mapb(c *pokeapi.Config) error {
-	err := pokeapi.GetMapAreas(c, "mapb")
-	if err != nil {
-		return err
+func (cc cliCommand) Mapb(c *pokeapi.Config, cache *pokecache.Cache) error {
+	mapLocations := pokeapi.MapLocations{}
+	entry, ok := cache.Get(c.Previous)
+	if ok {
+		fmt.Println("-In cache !!")
+		err := json.Unmarshal(entry, &mapLocations)
+		if err != nil {
+			return err
+		}
+
+	} else {
+		data, err := pokeapi.GetMapAreas(c, "mapb")
+		if err != nil {
+			return err
+		}
+		cache.Add(c.Previous, data)
+
+		err = json.Unmarshal(data, &mapLocations)
+		if err != nil {
+			return err
+		}
 	}
+
+	c.Next = mapLocations.Next
+
+	if mapLocations.Previous != nil {
+		c.Previous = *mapLocations.Previous
+	}
+
+	for _, location := range mapLocations.Results {
+		fmt.Println(location.Name)
+	}
+
 	return nil
 }
 
 func main() {
 	config := pokeapi.Config{Next: "https://pokeapi.co/api/v2/location-area", Previous: ""}
 	cc := cliCommand{}
+
+	t := time.Duration(time.Minute)
+	cache := pokecache.NewCache(t * 5)
 
 	for {
 
@@ -74,30 +135,29 @@ func main() {
 			os.Exit(1)
 		}
 
-		if scanner.Text() == "help" {
-			fmt.Println()
+		input := scanner.Text()
+
+		switch input {
+		case "help":
 			fmt.Println("Usage:")
 			commands := cc.Help()
 			for _, command := range commands {
 				fmt.Printf("%s: %s\n", command.name, command.description)
 			}
-			fmt.Println()
-		}
-		if scanner.Text() == "map" {
-			err := cc.Map(&config)
+		case "map":
+			err := cc.Map(&config, &cache)
 			if err != nil {
 				fmt.Println(err)
 			}
-		}
-		if scanner.Text() == "mapb" {
-			err := cc.Mapb(&config)
+		case "mapb":
+			err := cc.Mapb(&config, &cache)
 			if err != nil {
 				fmt.Println(err)
 			}
-		}
-
-		if scanner.Text() == "exit" {
+		case "exit":
 			cc.Exit()
+		default:
+			fmt.Printf("'%s' command does not exist, use 'help' to see a list of commands\n", input)
 		}
 	}
 }
