@@ -50,6 +50,15 @@ type Area struct {
 	} `json:"pokemon_encounters"`
 }
 
+type Pokemon struct {
+	ID             int    `json:"id"`
+	Name           string `json:"name"`
+	BaseExperience int    `json:"base_experience"`
+	Height         int    `json:"height"`
+	IsDefault      bool   `json:"is_default"`
+	Weight         int    `json:"weight"`
+}
+
 func GetMapAreas(c *Config, command string) ([]byte, error) {
 	var requestUrl string
 	if command == "map" {
@@ -79,6 +88,24 @@ func GetMapAreas(c *Config, command string) ([]byte, error) {
 func ExploreArea(area string) ([]byte, error) {
 	baseUrl := "https://pokeapi.co/api/v2/location-area/"
 	requestUrl := baseUrl + area
+
+	res, err := http.Get(requestUrl)
+	if err != nil {
+		return []byte{}, err
+	}
+	defer res.Body.Close()
+
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	return data, nil
+}
+
+func GetPokemonExperience(pokemon string) ([]byte, error) {
+	baseUrl := "https://pokeapi.co/api/v2/pokemon/"
+	requestUrl := baseUrl + pokemon
 
 	res, err := http.Get(requestUrl)
 	if err != nil {
