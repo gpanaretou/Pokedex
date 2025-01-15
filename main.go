@@ -57,7 +57,6 @@ func (cc cliCommand) Map(c *pokeapi.Config, cache *pokecache.Cache) error {
 	mapLocations := pokeapi.MapLocations{}
 	entry, ok := cache.Get(c.Next)
 	if ok {
-		fmt.Println("-In cache !!")
 		err := json.Unmarshal(entry, &mapLocations)
 		if err != nil {
 			return err
@@ -92,7 +91,6 @@ func (cc cliCommand) Mapb(c *pokeapi.Config, cache *pokecache.Cache) error {
 	mapLocations := pokeapi.MapLocations{}
 	entry, ok := cache.Get(c.Previous)
 	if ok {
-		fmt.Println("-In cache !!")
 		err := json.Unmarshal(entry, &mapLocations)
 		if err != nil {
 			return err
@@ -163,7 +161,6 @@ func (cc cliCommand) Catch(pokemon string, cache *pokecache.Cache) (Pokemon poke
 			return pokemonInfo, false, err
 		}
 	} else {
-		fmt.Println("not in cache")
 		data, err := pokeapi.GetPokemonExperience(pokemon)
 		if err != nil {
 			return pokemonInfo, false, err
@@ -252,6 +249,12 @@ func main() {
 			if !ok && isCaught {
 				fmt.Printf("%v added to pokedex!\n", name)
 				pokedex[name] = Pokemon
+			}
+
+		case "pokedex":
+			fmt.Println("Your Pokedex:")
+			for pokemon, _ := range pokedex {
+				fmt.Printf("\t- %v\n", pokemon)
 			}
 
 		case "exit":
